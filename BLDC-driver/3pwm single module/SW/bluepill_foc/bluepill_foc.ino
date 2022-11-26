@@ -1,4 +1,4 @@
-//#include <Arduino.h>
+#include <Arduino.h>
 //#include "stm32f1xx_hal.h"
 #include <SimpleFOC.h>
 #include "config.h"
@@ -13,20 +13,19 @@
 
 
 // BLDC motor & driver instance
-BLDCMotor motor1 = BLDCMotor(20);
-BLDCDriver3PWM driver1 = BLDCDriver3PWM(PA0, PA1, PA2, PB9);//(9, 5, 6, 8);
+BLDCMotor motor1 = BLDCMotor(MotorPols);
+BLDCDriver3PWM driver1 = BLDCDriver3PWM(PA0, PA1, PA2, PB9);//(U,V,W,EN); pins 
 
 
 
 
-InlineCurrentSense current_sense1 = InlineCurrentSense(0.001, 20, PA3, PA4);  // motor 1
-
+InlineCurrentSense current_sense1 = InlineCurrentSense(0.001, 20, PA3, PA4);  // ( shunt res , gain of opamp , line 1 ADC pin , line 2 ADC pin)
 
 
 
 
 // encoder instance
-Encoder encoder1 = Encoder(PB6, PB7, 1024);
+Encoder encoder1 = Encoder(PB6, PB7, 1024); // (A , B , pulse count / PPR  ) 
 // channel A and B callbacks
 void doA1() {
   encoder1.handleA();
@@ -75,7 +74,7 @@ if (cmd[0] == '2') command.verbose = VerboseMode::nothing;
 
 
 void setup() {
-  pinMode(PC13, OUTPUT);
+  pinMode(LEDpin, OUTPUT); // 
 
   //  afio_cfg_debug_ports(AFIO_DEBUG_NONE);    //if you are not using stm32 official arduino firmware you might need to turn of the debug mode 
 
@@ -94,7 +93,7 @@ void setup() {
   command.verbose = VerboseMode::nothing;
 
 
-  digitalWrite(PC13, LOW);   // turn the LED on (HIGH is the voltage level)
+  digitalWrite(LEDpin, LOW);   // turn the LED on (HIGH is the voltage level)
 
 
 
@@ -147,23 +146,23 @@ void setup() {
   motor1.PID_velocity.output_ramp = PID_V_ramp;
 
   motor1.LPF_velocity.Tf = PID_V_lpf;
-  motor1.P_angle.P = 20;
-  motor1.P_angle.I = 0;  // usually only P controller is enough
-  motor1.P_angle.D = 0;  // usually only P controller is enough
+  motor1.P_angle.P = PID_A_P;
+  motor1.P_angle.I = PID_A_I;  // usually only P controller is enough
+  motor1.P_angle.D = PID_A_D;  // usually only P controller is enough
   // acceleration control using output ramp
   // this variable is in rad/s^2 and sets the limit of acceleration
-  motor1.P_angle.output_ramp = 1000; // default 1e6 rad/s^2
+  motor1.P_angle.output_ramp = PID_A_ramp; // default 1e6 rad/s^2
 
   // angle low pass filtering
   // default 0 - disabled
   // use only for very noisy position sensors - try to avoid and keep the values very small
-  motor1.LPF_angle.Tf = 0; // default 0
+  motor1.LPF_angle.Tf = PID_A_lpf; // default 0
 
 
 
   // default voltage_power_supply
-  motor1.voltage_limit = 20;     //12
-  motor1.current_limit = currentLimit; // Amps -  default 2 Amps
+  motor1.voltage_limit = voltageLimit;     // the amoun of voltage that produce by SWM 
+  motor1.current_limit = currentLimit; // Amps some how equal to max torque 
 
 
 
@@ -175,12 +174,12 @@ void setup() {
 
 
   // angle loop velocity limit
-  motor1.velocity_limit = 10;
+  motor1.velocity_limit = velocityLimit;
 
 
 
   // motor phase resistance [Ohms]
-  motor1.phase_resistance = 1.6; // Ohms - default not set
+  motor1.phase_resistance = phaseResistance // Ohms - default not set
   // motor KV rating [rpm/V]
   //motor1.KV_rating = 100; // rpm/volt - default not set
 
